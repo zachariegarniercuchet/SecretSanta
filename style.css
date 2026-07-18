@@ -140,6 +140,11 @@ button.gold{ background:linear-gradient(180deg,var(--gold-light),var(--gold)); c
 .box .power{ font-size:0.95em; color:#4a3a10;}
 .box.filled-fascist .power, .box.filled-liberal .power{ color:var(--gold-light);}
 
+.win-logo{
+  width:78%; height:78%; object-fit:contain;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+}
+
 #power-overlay{
   position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.88);
   display:flex; align-items:center; justify-content:center; z-index:110; padding:20px;
@@ -193,6 +198,10 @@ button.gold{ background:linear-gradient(180deg,var(--gold-light),var(--gold)); c
 .card-choice-btn{ display:block; margin:6px auto 0; width:140px;}
 .teammates{ margin-top:10px; color:var(--gold-light); font-size:0.9em;}
 .close-x{ margin-top:20px; }
+
+.role-card-img{
+  width:100%; height:100%; object-fit:contain; border-radius:5px;
+}
 
 /* ---------- SMALL SCREENS ---------- */
 /* ---------- LEGISLATIVE CARD SELECTOR ---------- */

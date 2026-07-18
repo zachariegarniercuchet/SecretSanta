@@ -228,7 +228,7 @@ function renderTracks(){
   for(let i=0;i<5;i++){
     const box = document.createElement('div');
     box.className = 'box' + (i < state.liberalCount ? ' filled-liberal':'') + (i===4?' victory':'');
-    box.textContent = i===4 ? 'WIN' : '';
+    box.innerHTML = i===4 ? '<img class="win-logo" src="icons/logo_liberal-removebg.png" alt="Liberal victory">' : '';
     libTrack.appendChild(box);
   }
 
@@ -239,7 +239,7 @@ function renderTracks(){
     box.className = 'box' + (i < state.fascistCount ? ' filled-fascist':'') + (i===5?' victory':'');
     const label = state.powerLabels[i];
     if(label==='victory'){
-      box.innerHTML = 'WIN';
+      box.innerHTML = '<img class="win-logo" src="icons/logo_fascist-removebg.png" alt="Fascist victory">';
     } else if(label){
       box.innerHTML = `<span class="power">${POWER_TEXT[label]}</span>`;
     }
@@ -275,7 +275,9 @@ function openFirstRevealModal(p){
 function showRoleCards(p){
   const content = document.getElementById('modalContent');
   let roleClass = 'role-' + p.role;
-  let roleText = p.role.toUpperCase();
+  let roleInner = p.role === 'hitler'
+    ? '<img class="role-card-img" src="icons/Hitler_card.png" alt="Hitler">'
+    : p.role.toUpperCase();
   let partyText = p.party.toUpperCase() + ' PARTY';
   let teammateHtml = '';
 
@@ -294,8 +296,8 @@ function showRoleCards(p){
   content.innerHTML = `
     <div class="modal-title">${p.name}'s Role</div>
     <div class="card-row">
-      <div class="card-big ${roleClass}">${roleText}</div>
-      <div class="card-big ${roleClass}">${partyText}</div>
+      <div class="card-big ${roleClass}">${roleInner}</div>
+      <div class="card-big role-fascist">${partyText}</div>
     </div>
     ${teammateHtml}
     <button class="close-x gold" id="closeModalBtn">Done — Close</button>
