@@ -42,7 +42,6 @@
         <div>Deck: <span id="deckCount">0</span></div>
         <div>Discard: <span id="discardCount">0</span></div>
       </div>
-      <button class="secondary" id="fullscreenBtn">⛶ Fullscreen</button>
       <button class="secondary" id="newGameBtn">↻ New Game</button>
     </div>
 
@@ -69,6 +68,13 @@
 <!-- ================= POWER OVERLAY ================= -->
 <div id="power-overlay" class="hidden">
   <div class="power-banner" id="powerBanner"></div>
+</div>
+
+<!-- ================= FULLSCREEN CONTROL (video-player style, detached UI) ================= -->
+<div id="fs-control-layer">
+  <button id="fsIconBtn" aria-label="Toggle fullscreen">
+    <svg id="fsIconSvg" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+  </button>
 </div>
 
 <script>
@@ -333,32 +339,6 @@ function openPresidentRevealModal(){
   document.getElementById('presRevealBtn').onclick = showPresidentCards;
 }
 
-function showPresidentCards(){
-  const content = document.getElementById('modalContent');
-  const three = state.legislative.three;
-  content.innerHTML = `
-    <div class="modal-title">President: choose ONE to discard</div>
-    <div class="card-row">
-      ${three.map((c,i)=>`
-        <div>
-          <div class="card-big policy-${c}">${c.toUpperCase()}</div>
-          <button class="card-choice-btn secondary" data-i="${i}">Discard this one</button>
-        </div>`).join('')}
-    </div>
-  `;
-  content.querySelectorAll('.card-choice-btn').forEach(btn=>{
-    btn.onclick = ()=>{
-      const i = parseInt(btn.dataset.i);
-      const discarded = three.splice(i,1)[0];
-      state.discard.push(discarded);
-      state.legislative.chancellorTwo = three;
-      state.legislative.stage = 'chancellor-hidden';
-      renderAll();
-      showHandoffToChancellor();
-    };
-  });
-}
-
 function showHandoffToChancellor(){
   const content = document.getElementById('modalContent');
   content.innerHTML = `
@@ -368,35 +348,95 @@ function showHandoffToChancellor(){
   document.getElementById('chanRevealBtn').onclick = showChancellorCards;
 }
 
-function showChancellorCards(){
+// Generic interactive selector: cards idle-shake side by side; tapping a card
+// glides it into a reserved slot near the confirm button. Tapping a slotted
+// card sends it back to the hand. Leftover (never-selected) cards are
+// discarded automatically when the confirm button is pressed.
+function openLegislativeSelector(cards, neededSelect, confirmLabel, vetoAvailable, onConfirm){
   const content = document.getElementById('modalContent');
-  const two = state.legislative.chancellorTwo;
-  const vetoAvailable = state.fascistCount >= 5;
+  const cardObjs = cards.map((type,i)=>({id:i, type}));
+  let selected = [];
+
+  const title = neededSelect === 2
+    ? 'President: tap 2 cards to send to the Chancellor'
+    : 'Chancellor: tap 1 card to enact';
+
   content.innerHTML = `
-    <div class="modal-title">Chancellor: choose ONE to enact</div>
-    <div class="card-row">
-      ${two.map((c,i)=>`
-        <div>
-          <div class="card-big policy-${c}">${c.toUpperCase()}</div>
-          <button class="card-choice-btn" data-i="${i}">Enact this policy</button>
-        </div>`).join('')}
+    <div class="modal-title">${title}</div>
+    <div class="legislative-stage" id="legStage">
+      ${cardObjs.map(c=>`<div class="lcard policy-${c.type} shake" data-id="${c.id}" style="animation-delay:${(c.id*0.18).toFixed(2)}s">${c.type.toUpperCase()}</div>`).join('')}
+      ${Array.from({length:neededSelect}).map((_,i)=>`<div class="lslot" data-slot="${i}"></div>`).join('')}
     </div>
-    ${vetoAvailable ? '<button class="secondary" id="vetoBtn" style="margin-top:15px;">Propose Veto (needs President\'s consent)</button>' : ''}
+    <button class="gold" id="confirmLegBtn" disabled>${confirmLabel}</button>
+    ${vetoAvailable ? '<button class="secondary" id="vetoBtn" style="margin-top:10px;">Propose Veto (needs President\'s consent)</button>' : ''}
   `;
-  content.querySelectorAll('.card-choice-btn').forEach(btn=>{
-    btn.onclick = ()=>{
-      const i = parseInt(btn.dataset.i);
-      const enacted = two.splice(i,1)[0];
-      const other = two[0];
-      if(other) state.discard.push(other);
-      enactPolicy(enacted);
+
+  const stage = document.getElementById('legStage');
+  const cardEls = {};
+  cardObjs.forEach(c=>{ cardEls[c.id] = stage.querySelector(`.lcard[data-id="${c.id}"]`); });
+  const slotEls = Array.from(stage.querySelectorAll('.lslot'));
+  const CW = 88, CH = 122, GAP = 8;
+
+  function layout(){
+    const stageW = stage.clientWidth;
+    const handIds = cardObjs.map(c=>c.id).filter(id=>!selected.includes(id));
+    const handTotal = handIds.length*CW + Math.max(0,handIds.length-1)*GAP;
+    const handStartX = (stageW - handTotal)/2;
+    handIds.forEach((id,i)=>{
+      const el = cardEls[id];
+      el.style.left = (handStartX + i*(CW+GAP)) + 'px';
+      el.style.top = '0px';
+      el.classList.add('shake');
+      el.classList.remove('settled');
+    });
+
+    const slotTotal = neededSelect*CW + Math.max(0,neededSelect-1)*GAP;
+    const slotStartX = (stageW - slotTotal)/2;
+    for(let i=0;i<neededSelect;i++){
+      slotEls[i].style.left = (slotStartX + i*(CW+GAP)) + 'px';
+      slotEls[i].style.top = '150px';
+    }
+    selected.forEach((id,i)=>{
+      const el = cardEls[id];
+      el.style.left = (slotStartX + i*(CW+GAP)) + 'px';
+      el.style.top = '150px';
+      el.classList.remove('shake');
+      el.classList.add('settled');
+    });
+  }
+
+  function updateConfirmBtn(){
+    document.getElementById('confirmLegBtn').disabled = selected.length !== neededSelect;
+  }
+
+  cardObjs.forEach(c=>{
+    cardEls[c.id].onclick = ()=>{
+      if(selected.includes(c.id)){
+        selected = selected.filter(id=>id!==c.id);
+      } else {
+        if(selected.length >= neededSelect) return;
+        selected.push(c.id);
+      }
+      layout();
+      updateConfirmBtn();
     };
   });
+
+  layout();
+  updateConfirmBtn();
+
+  document.getElementById('confirmLegBtn').onclick = ()=>{
+    const leftoverTypes = cardObjs.filter(c=>!selected.includes(c.id)).map(c=>c.type);
+    leftoverTypes.forEach(t=>state.discard.push(t));
+    const chosenTypes = selected.map(id=>cardObjs.find(c=>c.id===id).type);
+    onConfirm(chosenTypes);
+  };
+
   if(vetoAvailable){
     document.getElementById('vetoBtn').onclick = ()=>{
       const consent = window.confirm("Does the President consent to the veto? OK = Yes, Cancel = No");
       if(consent){
-        state.discard.push(two[0], two[1]);
+        cardObjs.forEach(c=>state.discard.push(c.type));
         state.legislative = null;
         closeModal();
         renderAll();
@@ -406,6 +446,22 @@ function showChancellorCards(){
       }
     };
   }
+}
+
+function showPresidentCards(){
+  openLegislativeSelector(state.legislative.three, 2, 'Send to Chancellor', false, (chosenTwo)=>{
+    state.legislative.chancellorTwo = chosenTwo;
+    state.legislative.stage = 'chancellor-hidden';
+    renderAll();
+    showHandoffToChancellor();
+  });
+}
+
+function showChancellorCards(){
+  const vetoAvailable = state.fascistCount >= 5;
+  openLegislativeSelector(state.legislative.chancellorTwo, 1, 'Enact Law', vetoAvailable, (chosenOne)=>{
+    enactPolicy(chosenOne[0]);
+  });
 }
 
 function enactPolicy(type){
@@ -517,26 +573,52 @@ document.getElementById('settingsBtn').onclick = ()=>{
   document.getElementById('settingsPanel').classList.toggle('hidden');
 };
 
-function updateFullscreenLabel(){
-  const btn = document.getElementById('fullscreenBtn');
-  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-  btn.textContent = isFs ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
+/* ============ YOUTUBE-STYLE FULLSCREEN CONTROL ============ */
+const ICON_EXPAND = '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';
+const ICON_COMPRESS = '<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>';
+
+function isFullscreen(){
+  return !!(document.fullscreenElement || document.webkitFullscreenElement);
 }
 
-document.getElementById('fullscreenBtn').onclick = ()=>{
-  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-  if(!isFs){
-    const el = document.documentElement;
-    if(el.requestFullscreen) el.requestFullscreen();
-    else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen(); // iOS Safari fallback
-  } else {
-    if(document.exitFullscreen) document.exitFullscreen();
-    else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
-  }
-};
+function updateFsIcon(){
+  document.getElementById('fsIconSvg').innerHTML = isFullscreen() ? ICON_COMPRESS : ICON_EXPAND;
+}
 
-document.addEventListener('fullscreenchange', updateFullscreenLabel);
-document.addEventListener('webkitfullscreenchange', updateFullscreenLabel);
+async function toggleFullscreen(){
+  const el = document.documentElement;
+  if(!isFullscreen()){
+    if(el.requestFullscreen) await el.requestFullscreen().catch(()=>{});
+    else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    if(screen.orientation && screen.orientation.lock){
+      screen.orientation.lock('landscape').catch(()=>{}); // silently ignored where unsupported
+    }
+  } else {
+    if(document.exitFullscreen) await document.exitFullscreen().catch(()=>{});
+    else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+    if(screen.orientation && screen.orientation.unlock){
+      try{ screen.orientation.unlock(); }catch(e){}
+    }
+  }
+}
+
+let fsHideTimer = null;
+function showFsControls(){
+  if(document.getElementById('game-screen').classList.contains('hidden')) return; // only during play
+  const layer = document.getElementById('fs-control-layer');
+  layer.classList.add('visible');
+  clearTimeout(fsHideTimer);
+  fsHideTimer = setTimeout(()=>{ layer.classList.remove('visible'); }, 2500);
+}
+
+document.getElementById('fsIconBtn').onclick = (e)=>{
+  e.stopPropagation();
+  toggleFullscreen();
+  showFsControls();
+};
+document.getElementById('game-screen').addEventListener('click', showFsControls);
+document.addEventListener('fullscreenchange', updateFsIcon);
+document.addEventListener('webkitfullscreenchange', updateFsIcon);
 </script>
 </body>
 </html>
