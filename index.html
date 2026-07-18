@@ -9,13 +9,15 @@
 <body>
 
 <div class="app-frame">
-  <div class="crest">
-    <svg viewBox="0 0 100 60" class="crest-svg">
-      <path d="M50 5 L58 20 L75 15 L65 30 L85 35 L62 38 L70 55 L50 42 L30 55 L38 38 L15 35 L35 30 L25 15 L42 20 Z" />
-    </svg>
+  <div id="titleBlock">
+    <div class="crest">
+      <svg viewBox="0 0 100 60" class="crest-svg">
+        <path d="M50 5 L58 20 L75 15 L65 30 L85 35 L62 38 L70 55 L50 42 L30 55 L38 38 L15 35 L35 30 L25 15 L42 20 Z" />
+      </svg>
+    </div>
+    <h1>Secret Hitler</h1>
+    <div class="subtitle">A Party Congress Simulation — Germany, 1933</div>
   </div>
-  <h1>Secret Hitler</h1>
-  <div class="subtitle">A Party Congress Simulation — Germany, 1933</div>
 
   <!-- ================= SETUP ================= -->
   <div id="setup-screen">
@@ -33,12 +35,20 @@
 
   <!-- ================= GAME ================= -->
   <div id="game-screen" class="hidden">
-    <div class="topbar">
+    <div id="settingsBtn">⚙</div>
+    <div id="settingsPanel" class="hidden">
+      <div id="seedDisplay"></div>
+      <div class="settings-counts">
+        <div>Deck: <span id="deckCount">0</span></div>
+        <div>Discard: <span id="discardCount">0</span></div>
+      </div>
       <button class="secondary" id="newGameBtn">↻ New Game</button>
-      <span id="seedDisplay"></span>
     </div>
 
     <div id="table-wrap">
+      <div class="card-deck" id="drawPileBtn">
+        <div class="deck-word">DRAW</div>
+      </div>
       <div id="table-center">
         <div class="track-label">LIBERAL POLICIES</div>
         <div class="track" id="liberalTrack"></div>
@@ -46,14 +56,6 @@
         <div class="track" id="fascistTrack"></div>
 
         <div id="powerBanner"></div>
-
-        <div class="drawpile-wrap">
-          <div class="card-deck" id="drawPileBtn">DRAW<br>PILE</div>
-          <div class="counts">
-            <span>Deck: <span id="deckCount">0</span></span>
-            <span>Discard: <span id="discardCount">0</span></span>
-          </div>
-        </div>
       </div>
       <!-- player circles injected here by JS -->
     </div>
@@ -484,6 +486,7 @@ document.getElementById('playBtn').onclick = ()=>{
   const seed = document.getElementById('seedInput').value;
   initGame(n, seed);
   document.getElementById('setup-screen').classList.add('hidden');
+  document.getElementById('titleBlock').classList.add('hidden');
   document.getElementById('game-screen').classList.remove('hidden');
   renderAll();
 };
@@ -491,8 +494,14 @@ document.getElementById('playBtn').onclick = ()=>{
 document.getElementById('newGameBtn').onclick = ()=>{
   if(!confirm('Start a brand new game? This will discard current progress.')) return;
   document.getElementById('game-screen').classList.add('hidden');
+  document.getElementById('titleBlock').classList.remove('hidden');
   document.getElementById('setup-screen').classList.remove('hidden');
   document.getElementById('powerBanner').innerHTML = '';
+  document.getElementById('settingsPanel').classList.add('hidden');
+};
+
+document.getElementById('settingsBtn').onclick = ()=>{
+  document.getElementById('settingsPanel').classList.toggle('hidden');
 };
 </script>
 </body>
