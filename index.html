@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Secret Hitler - Board</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-frame">
+  <div class="crest">
+    <svg viewBox="0 0 100 60" class="crest-svg">
+      <path d="M50 5 L58 20 L75 15 L65 30 L85 35 L62 38 L70 55 L50 42 L30 55 L38 38 L15 35 L35 30 L25 15 L42 20 Z" />
+    </svg>
+  </div>
+  <h1>Secret Hitler</h1>
+  <div class="subtitle">A Party Congress Simulation — Germany, 1933</div>
+
+  <!-- ================= SETUP ================= -->
+  <div id="setup-screen">
+    <label for="numPlayers">Number of players</label>
+    <select id="numPlayers">
+      <option value="5">5</option><option value="6">6</option><option value="7">7</option>
+      <option value="8" selected>8</option><option value="9">9</option><option value="10">10</option>
+    </select>
+
+    <label for="seedInput">Seed (optional — same seed = same deal)</label>
+    <input type="text" id="seedInput" placeholder="leave blank for random">
+
+    <button id="playBtn" class="gold">Begin Session</button>
+  </div>
+
+  <!-- ================= GAME ================= -->
+  <div id="game-screen" class="hidden">
+    <div class="topbar">
+      <button class="secondary" id="newGameBtn">↻ New Game</button>
+      <span id="seedDisplay"></span>
+    </div>
+
+    <div id="table-wrap">
+      <div id="table-center">
+        <div class="track-label">LIBERAL POLICIES</div>
+        <div class="track" id="liberalTrack"></div>
+        <div class="track-label">FASCIST POLICIES</div>
+        <div class="track" id="fascistTrack"></div>
+
+        <div id="powerBanner"></div>
+
+        <div class="drawpile-wrap">
+          <div class="card-deck" id="drawPileBtn">DRAW<br>PILE</div>
+          <div class="counts">
+            <span>Deck: <span id="deckCount">0</span></span>
+            <span>Discard: <span id="discardCount">0</span></span>
+          </div>
+        </div>
+      </div>
+      <!-- player circles injected here by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL ================= -->
+<div id="modal-overlay" class="hidden">
+  <div class="modal-box" id="modalContent"></div>
+</div>
+
+<script>
+/* ============ SEEDED RNG ============ */
+function xmur3(str){
+  let h = 1779033703 ^ str.length;
+  for (let i=0;i<str.length;i++){
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = h<<13 | h>>>19;
+  }
+  return function(){
+    h = Math.imul(h ^ h>>>16, 2246822507);
+    h = Math.imul(h ^ h>>>13, 3266489909);
+    h ^= h>>>16;
+    return h >>> 0;
+  };
+}
+function mulberry32(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function makeRng(seedStr){
+  const seedFn = xmur3(seedStr);
+  return mulberry32(seedFn());
+}
+function shuffle(arr, rng){
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(rng()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+
+/* ============ GAME CONFIG ============ */
+const ROLE_TABLE = {
+  5:{lib:3, fasc:1}, 6:{lib:4, fasc:1}, 7:{lib:4, fasc:2},
+  8:{lib:5, fasc:2}, 9:{lib:5, fasc:3}, 10:{lib:6, fasc:3}
+};
+function getPowerLabels(n){
+  if(n<=6) return ['', '', 'peek', 'kill', 'kill', 'victory'];
+  if(n<=8) return ['', 'investigate', 'special', 'kill', 'kill', 'victory'];
+  return ['investigate', 'investigate', 'special', 'kill', 'kill', 'victory'];
+}
+const POWER_TEXT = {
+  peek:'Policy Peek', kill:'Execution', investigate:'Investigate Loyalty',
+  special:'Special Election', victory:'Fascist Victory'
+};
+
+/* ============ STATE ============ */
+let state = null;
+
+function initGame(numPlayers, seedStr){
+  const seed = seedStr && seedStr.trim() ? seedStr.trim() : String(Date.now());
+  const rng = makeRng(seed);
+
+  const cfg = ROLE_TABLE[numPlayers];
+  let roles = [];
+  for(let i=0;i<cfg.lib;i++) roles.push('liberal');
+  for(let i=0;i<cfg.fasc;i++) roles.push('fascist');
+  roles.push('hitler');
+  shuffle(roles, rng);
+
+  const players = [];
+  for(let i=0;i<numPlayers;i++){
+    players.push({
+      id:i, name:null, role:roles[i],
+      party: roles[i]==='liberal' ? 'liberal' : 'fascist'
+    });
+  }
+
+  // Fixed physical deck: 6 liberal + 11 fascist = 17 total, always.
+  let deck = [];
+  for(let i=0;i<6;i++) deck.push('liberal');
+  for(let i=0;i<11;i++) deck.push('fascist');
+  shuffle(deck, rng);
+
+  state = {
+    seed, numPlayers, players, rng, deck, discard:[],
+    liberalCount:0, fascistCount:0,
+    powerLabels: getPowerLabels(numPlayers),
+    legislative:null
+  };
+}
+
+/* ============ CARD DRAWING (respects physical 17-card deck) ============ */
+// Draws n cards one at a time. Only reshuffles the discard pile back in
+// once the deck is truly empty mid-draw -- never shuffles early.
+function drawCards(n){
+  const result = [];
+  for(let i=0;i<n;i++){
+    if(state.deck.length === 0){
+      if(state.discard.length === 0) break; // total conserved at 17, shouldn't happen
+      state.deck = shuffle(state.discard.slice(), state.rng);
+      state.discard = [];
+    }
+    result.push(state.deck.pop());
+  }
+  return result;
+}
+// Read-only peek at the top of the deck, no reshuffle triggered by peeking.
+function peekTop(n){
+  const available = Math.min(n, state.deck.length);
+  return state.deck.slice(-available).reverse();
+}
+
+/* ============ RENDER ============ */
+function renderAll(){
+  renderPlayers();
+  renderTracks();
+  document.getElementById('deckCount').textContent = state.deck.length;
+  document.getElementById('discardCount').textContent = state.discard.length;
+  document.getElementById('seedDisplay').textContent = 'seed: ' + state.seed;
+}
+
+function renderPlayers(){
+  const wrap = document.getElementById('table-wrap');
+  wrap.querySelectorAll('.player-circle').forEach(el=>el.remove());
+  const n = state.players.length;
+  const radius = 44; // percent of table-wrap
+  state.players.forEach((p,i)=>{
+    const angle = (2*Math.PI*i/n) - Math.PI/2;
+    const x = 50 + radius*Math.cos(angle);
+    const y = 50 + radius*Math.sin(angle);
+    const div = document.createElement('div');
+    div.className = 'player-circle' + (p.name ? ' assigned':'');
+    div.style.left = x+'%';
+    div.style.top = y+'%';
+    div.innerHTML = p.name
+      ? `<div class="name">${p.name}</div>`
+      : `<div>Seat ${p.id+1}</div>`;
+    div.onclick = ()=>onPlayerClick(p.id);
+    wrap.appendChild(div);
+  });
+}
+
+function renderTracks(){
+  const libTrack = document.getElementById('liberalTrack');
+  libTrack.innerHTML = '';
+  for(let i=0;i<5;i++){
+    const box = document.createElement('div');
+    box.className = 'box' + (i < state.liberalCount ? ' filled-liberal':'') + (i===4?' victory':'');
+    box.textContent = i===4 ? 'WIN' : '';
+    libTrack.appendChild(box);
+  }
+
+  const fascTrack = document.getElementById('fascistTrack');
+  fascTrack.innerHTML = '';
+  for(let i=0;i<6;i++){
+    const box = document.createElement('div');
+    box.className = 'box' + (i < state.fascistCount ? ' filled-fascist':'') + (i===5?' victory':'');
+    const label = state.powerLabels[i];
+    if(label==='victory'){
+      box.innerHTML = 'WIN';
+    } else if(label){
+      box.innerHTML = `<span class="power">${POWER_TEXT[label]}</span>`;
+    }
+    fascTrack.appendChild(box);
+  }
+}
+
+/* ============ PLAYER HEAD CLICK ============ */
+function onPlayerClick(id){
+  const p = state.players[id];
+  if(!p.name){
+    const n = window.prompt('Enter this player\'s name:');
+    if(!n) return;
+    p.name = n.trim();
+    renderPlayers();
+    openFirstRevealModal(p);
+  } else {
+    openPartyOnlyModal(p);
+  }
+}
+
+function openFirstRevealModal(p){
+  const content = document.getElementById('modalContent');
+  content.innerHTML = `
+    <div class="modal-title">Hand the phone to <b>${p.name}</b></div>
+    <p>Tap below to secretly reveal your Secret Role and Party Membership card.</p>
+    <div class="card-big back" id="revealBtn">TAP TO<br>REVEAL</div>
+  `;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.getElementById('revealBtn').onclick = ()=>showRoleCards(p);
+}
+
+function showRoleCards(p){
+  const content = document.getElementById('modalContent');
+  let roleClass = 'role-' + p.role;
+  let roleText = p.role.toUpperCase();
+  let partyText = p.party.toUpperCase() + ' PARTY';
+  let teammateHtml = '';
+
+  if(p.role === 'fascist'){
+    const others = state.players.filter(x => x.role==='fascist' && x.id!==p.id);
+    const hitler = state.players.find(x=>x.role==='hitler');
+    let names = others.map(x=>x.name || 'Seat '+(x.id+1));
+    names.push((hitler.name || 'Seat '+(hitler.id+1)) + ' (HITLER)');
+    teammateHtml = `<div class="teammates">Your fellow fascists: ${names.join(', ')}</div>`;
+  }
+  if(p.role === 'hitler' && state.numPlayers <= 6){
+    const fasc = state.players.find(x=>x.role==='fascist');
+    teammateHtml = `<div class="teammates">Your fascist teammate: ${fasc.name || 'Seat '+(fasc.id+1)}</div>`;
+  }
+
+  content.innerHTML = `
+    <div class="modal-title">${p.name}'s Role</div>
+    <div class="card-row">
+      <div class="card-big ${roleClass}">${roleText}</div>
+      <div class="card-big ${roleClass}">${partyText}</div>
+    </div>
+    ${teammateHtml}
+    <button class="close-x gold" id="closeModalBtn">Done — Close</button>
+  `;
+  document.getElementById('closeModalBtn').onclick = closeModal;
+}
+
+function openPartyOnlyModal(p){
+  const content = document.getElementById('modalContent');
+  content.innerHTML = `
+    <div class="modal-title">${p.name}</div>
+    <p>Click to reveal the Party Membership card.</p>
+    <div class="card-big back" id="revealPartyBtn">TAP TO<br>REVEAL</div>
+  `;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.getElementById('revealPartyBtn').onclick = ()=>{
+    content.innerHTML = `
+      <div class="modal-title">${p.name}'s Party Membership</div>
+      <div class="card-big role-${p.party}">${p.party.toUpperCase()} PARTY</div>
+      <button class="close-x gold" id="closeModalBtn">Close</button>
+    `;
+    document.getElementById('closeModalBtn').onclick = closeModal;
+  };
+}
+
+function closeModal(){
+  document.getElementById('modal-overlay').classList.add('hidden');
+  document.getElementById('modalContent').innerHTML = '';
+}
+
+/* ============ LEGISLATIVE SESSION ============ */
+document.getElementById('drawPileBtn').onclick = ()=>{
+  if(state.legislative){ alert('A legislative session is already in progress.'); return; }
+  const three = drawCards(3);
+  if(three.length < 3){ alert('Not enough policy cards remain — check the deck/discard.'); return; }
+  state.legislative = { stage:'president-hidden', three, chancellorTwo:null };
+  renderAll();
+  openPresidentRevealModal();
+};
+
+function openPresidentRevealModal(){
+  const content = document.getElementById('modalContent');
+  content.innerHTML = `
+    <div class="modal-title">President only</div>
+    <p>Click to reveal the top 3 policies.</p>
+    <div class="card-big back" id="presRevealBtn">TAP TO<br>REVEAL</div>
+  `;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.getElementById('presRevealBtn').onclick = showPresidentCards;
+}
+
+function showPresidentCards(){
+  const content = document.getElementById('modalContent');
+  const three = state.legislative.three;
+  content.innerHTML = `
+    <div class="modal-title">President: choose ONE to discard</div>
+    <div class="card-row">
+      ${three.map((c,i)=>`
+        <div>
+          <div class="card-big policy-${c}">${c.toUpperCase()}</div>
+          <button class="card-choice-btn secondary" data-i="${i}">Discard this one</button>
+        </div>`).join('')}
+    </div>
+  `;
+  content.querySelectorAll('.card-choice-btn').forEach(btn=>{
+    btn.onclick = ()=>{
+      const i = parseInt(btn.dataset.i);
+      const discarded = three.splice(i,1)[0];
+      state.discard.push(discarded);
+      state.legislative.chancellorTwo = three;
+      state.legislative.stage = 'chancellor-hidden';
+      renderAll();
+      showHandoffToChancellor();
+    };
+  });
+}
+
+function showHandoffToChancellor(){
+  const content = document.getElementById('modalContent');
+  content.innerHTML = `
+    <div class="modal-title">Hand the phone to the Chancellor</div>
+    <div class="card-big back" id="chanRevealBtn">TAP TO<br>REVEAL</div>
+  `;
+  document.getElementById('chanRevealBtn').onclick = showChancellorCards;
+}
+
+function showChancellorCards(){
+  const content = document.getElementById('modalContent');
+  const two = state.legislative.chancellorTwo;
+  const vetoAvailable = state.fascistCount >= 5;
+  content.innerHTML = `
+    <div class="modal-title">Chancellor: choose ONE to enact</div>
+    <div class="card-row">
+      ${two.map((c,i)=>`
+        <div>
+          <div class="card-big policy-${c}">${c.toUpperCase()}</div>
+          <button class="card-choice-btn" data-i="${i}">Enact this policy</button>
+        </div>`).join('')}
+    </div>
+    ${vetoAvailable ? '<button class="secondary" id="vetoBtn" style="margin-top:15px;">Propose Veto (needs President\'s consent)</button>' : ''}
+  `;
+  content.querySelectorAll('.card-choice-btn').forEach(btn=>{
+    btn.onclick = ()=>{
+      const i = parseInt(btn.dataset.i);
+      const enacted = two.splice(i,1)[0];
+      const other = two[0];
+      if(other) state.discard.push(other);
+      enactPolicy(enacted);
+    };
+  });
+  if(vetoAvailable){
+    document.getElementById('vetoBtn').onclick = ()=>{
+      const consent = window.confirm("Does the President consent to the veto? OK = Yes, Cancel = No");
+      if(consent){
+        state.discard.push(two[0], two[1]);
+        state.legislative = null;
+        closeModal();
+        renderAll();
+        alert('Agenda vetoed. Both policies discarded. Advance the election tracker by 1 (tracked orally).');
+      } else {
+        alert('The President does not consent. The Chancellor must enact one of the two policies.');
+      }
+    };
+  }
+}
+
+function enactPolicy(type){
+  if(type === 'liberal'){
+    state.liberalCount++;
+  } else {
+    state.fascistCount++;
+  }
+  state.legislative = null;
+  closeModal();
+  renderAll();
+  checkWinAndPower(type);
+}
+
+function checkWinAndPower(justEnacted){
+  if(state.liberalCount >= 5){
+    setTimeout(()=>alert('🕊 LIBERAL VICTORY — 5 Liberal policies enacted!'), 200);
+    return;
+  }
+  if(state.fascistCount >= 6){
+    setTimeout(()=>alert('🔥 FASCIST VICTORY — 6 Fascist policies enacted!'), 200);
+    return;
+  }
+  if(justEnacted === 'fascist'){
+    const idx = state.fascistCount - 1;
+    const label = state.powerLabels[idx];
+    if(label && label !== 'victory'){
+      showPowerBanner(label);
+    }
+  }
+}
+
+function showPowerBanner(label){
+  const banner = document.getElementById('powerBanner');
+  let extra = '';
+  if(label === 'peek'){
+    extra = `<button id="peekBtn">Reveal top 3 cards (President only)</button>`;
+  } else if(label === 'investigate'){
+    extra = `<div class="banner-hint">Use a player's head-tap (Party Membership reveal) to investigate them.</div>`;
+  } else if(label === 'kill' || label === 'special'){
+    extra = `<div class="banner-hint">Resolve this orally at the table.</div>`;
+  }
+  banner.innerHTML = `
+    <div class="power-banner">
+      <div><b>Presidential Power granted:</b> ${POWER_TEXT[label]}</div>
+      ${extra}
+      <div><button class="secondary" id="dismissPowerBtn">Dismiss</button></div>
+    </div>`;
+  document.getElementById('dismissPowerBtn').onclick = ()=>{ banner.innerHTML=''; };
+  if(label === 'peek'){
+    document.getElementById('peekBtn').onclick = openPolicyPeekModal;
+  }
+}
+
+/* ============ POLICY PEEK ============ */
+function openPolicyPeekModal(){
+  const content = document.getElementById('modalContent');
+  content.innerHTML = `
+    <div class="modal-title">Policy Peek — President only</div>
+    <p>Click to secretly view the top of the deck. Nothing is removed or reordered.</p>
+    <div class="card-big back" id="peekRevealBtn">TAP TO<br>REVEAL</div>
+  `;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.getElementById('peekRevealBtn').onclick = ()=>{
+    const top = peekTop(3);
+    const note = top.length < 3 ? `<p class="banner-hint">Only ${top.length} card(s) remain before a reshuffle.</p>` : '';
+    content.innerHTML = `
+      <div class="modal-title">Top of deck (order preserved)</div>
+      <div class="card-row">
+        ${top.map(c=>`<div class="card-big policy-${c}">${c.toUpperCase()}</div>`).join('')}
+      </div>
+      ${note}
+      <button class="close-x gold" id="closeModalBtn">Done — Close</button>
+    `;
+    document.getElementById('closeModalBtn').onclick = closeModal;
+  };
+}
+
+/* ============ SETUP / NEW GAME ============ */
+document.getElementById('playBtn').onclick = ()=>{
+  const n = parseInt(document.getElementById('numPlayers').value);
+  const seed = document.getElementById('seedInput').value;
+  initGame(n, seed);
+  document.getElementById('setup-screen').classList.add('hidden');
+  document.getElementById('game-screen').classList.remove('hidden');
+  renderAll();
+};
+
+document.getElementById('newGameBtn').onclick = ()=>{
+  if(!confirm('Start a brand new game? This will discard current progress.')) return;
+  document.getElementById('game-screen').classList.add('hidden');
+  document.getElementById('setup-screen').classList.remove('hidden');
+  document.getElementById('powerBanner').innerHTML = '';
+};
+</script>
+</body>
+</html>
