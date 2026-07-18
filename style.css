@@ -86,7 +86,9 @@ button.gold{ background:linear-gradient(180deg,var(--gold-light),var(--gold)); c
 #seedDisplay{ color:var(--muted); font-size:0.7em; letter-spacing:1px; margin-bottom:8px;}
 .settings-counts{
   color:var(--parchment); font-size:0.78em; margin-bottom:10px; text-align:right; line-height:1.6;
-}#game-screen{ position:relative; }
+}
+#settingsPanel button{ display:block; width:100%; margin-top:6px;}
+#game-screen{ position:relative; }
 /* ---------- ROUND TABLE ---------- */
 #table-wrap{
   position:relative; width:100%; max-width:640px; aspect-ratio:16/10; margin:50px auto 8px;

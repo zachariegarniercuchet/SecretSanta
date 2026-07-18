@@ -42,6 +42,7 @@
         <div>Deck: <span id="deckCount">0</span></div>
         <div>Discard: <span id="discardCount">0</span></div>
       </div>
+      <button class="secondary" id="fullscreenBtn">⛶ Fullscreen</button>
       <button class="secondary" id="newGameBtn">↻ New Game</button>
     </div>
 
@@ -503,6 +504,27 @@ document.getElementById('newGameBtn').onclick = ()=>{
 document.getElementById('settingsBtn').onclick = ()=>{
   document.getElementById('settingsPanel').classList.toggle('hidden');
 };
+
+function updateFullscreenLabel(){
+  const btn = document.getElementById('fullscreenBtn');
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  btn.textContent = isFs ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
+}
+
+document.getElementById('fullscreenBtn').onclick = ()=>{
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if(!isFs){
+    const el = document.documentElement;
+    if(el.requestFullscreen) el.requestFullscreen();
+    else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen(); // iOS Safari fallback
+  } else {
+    if(document.exitFullscreen) document.exitFullscreen();
+    else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+  }
+};
+
+document.addEventListener('fullscreenchange', updateFullscreenLabel);
+document.addEventListener('webkitfullscreenchange', updateFullscreenLabel);
 </script>
 </body>
 </html>
