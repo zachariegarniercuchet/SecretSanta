@@ -81,9 +81,8 @@ button.gold{ background:linear-gradient(180deg,var(--gold-light),var(--gold)); c
 #game-screen{ position:relative; overflow:hidden; }
 
 #settingsTab{
-  position:absolute; top:50%; right:0; z-index:30;
-  transform:translateY(-50%);
-  width:26px; height:56px;
+  position:absolute; top:38px; right:0; z-index:30;
+  width:26px; height:44px;
   background:rgba(0,0,0,0.55); border:1px solid var(--gold); border-right:none;
   border-radius:8px 0 0 8px;
   color:var(--gold-light); display:flex; align-items:center; justify-content:center;
@@ -110,14 +109,68 @@ button.gold{ background:linear-gradient(180deg,var(--gold-light),var(--gold)); c
 #settingsPanel.open{ transform:translateX(0); }
 
 .settings-panel-inner{
-  padding:calc(env(safe-area-inset-top, 0px) + 20px) 16px 16px;
-  text-align:right;
+  padding:calc(env(safe-area-inset-top, 0px) + 22px) 16px 16px;
+  font-family:'Segoe UI', Arial, sans-serif;
 }
-#seedDisplay{ color:var(--muted); font-size:0.7em; letter-spacing:1px; margin-bottom:8px;}
-.settings-counts{
-  color:var(--parchment); font-size:0.78em; margin-bottom:14px; text-align:right; line-height:1.6;
+
+.settings-header{
+  font-size:0.68em; letter-spacing:2px; text-transform:uppercase;
+  color:var(--gold); font-weight:700; margin-bottom:10px;
 }
-.settings-panel-inner button{ display:block; width:100%; margin-top:8px;}
+
+.stat-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;
+}
+.stat-card{
+  background:rgba(255,255,255,0.04); border:1px solid rgba(201,162,39,0.25);
+  border-radius:10px; padding:10px 6px; text-align:center;
+}
+.stat-value{ font-size:1.4em; font-weight:700; color:var(--parchment); line-height:1.1; }
+.stat-label{
+  font-size:0.62em; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted);
+  margin-top:3px;
+}
+
+.seed-row{ margin-bottom:16px; }
+.seed-row .stat-label{ margin-bottom:6px; }
+.seed-pill{
+  background:rgba(255,255,255,0.04); border:1px solid rgba(201,162,39,0.25);
+  border-radius:8px; padding:8px 10px;
+  font-family:'Courier New', monospace; font-size:0.72em; color:var(--gold-light);
+  word-break:break-all; line-height:1.4;
+}
+
+.settings-divider{
+  height:1px; background:linear-gradient(90deg, transparent, rgba(201,162,39,0.4), transparent);
+  margin:14px 0;
+}
+
+.action-btn{
+  width:100%; display:flex; align-items:center; gap:10px;
+  padding:10px 12px; margin-top:8px; border-radius:10px;
+  text-align:left; border:1px solid transparent; cursor:pointer;
+  font-family:inherit; text-transform:none; letter-spacing:normal;
+}
+.action-icon{
+  font-size:1.3em; width:30px; height:30px; flex:none;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:50%; background:rgba(255,255,255,0.08);
+}
+.action-text{ display:flex; flex-direction:column; gap:1px; }
+.action-title{ font-size:0.85em; font-weight:600; }
+.action-sub{ font-size:0.68em; opacity:0.75; }
+
+.action-btn--primary{
+  background:rgba(46,84,136,0.18); border-color:rgba(46,84,136,0.5);
+}
+.action-btn--primary .action-icon{ color:var(--blue-bright); }
+.action-btn--primary .action-title{ color:var(--parchment); }
+
+.action-btn--danger{
+  background:rgba(156,43,43,0.15); border-color:rgba(156,43,43,0.45);
+}
+.action-btn--danger .action-icon{ color:#e08585; }
+.action-btn--danger .action-title{ color:#f0b8b8; }
 /* ---------- ROUND TABLE ---------- */
 #table-wrap{
   position:relative; width:100%; max-width:640px; aspect-ratio:16/10; margin:50px auto 8px;

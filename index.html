@@ -46,13 +46,42 @@
     <div id="settingsTab">‹</div>
     <div id="settingsPanel">
       <div class="settings-panel-inner">
-        <div id="seedDisplay"></div>
-        <div class="settings-counts">
-          <div>Deck: <span id="deckCount">0</span></div>
-          <div>Discard: <span id="discardCount">0</span></div>
+        <div class="settings-header">Session</div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="deckCount">0</div>
+            <div class="stat-label">Deck</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="discardCount">0</div>
+            <div class="stat-label">Discard</div>
+          </div>
         </div>
-        <button class="secondary" id="newGameSameBtn">↻ New Game (same players)</button>
-        <button class="secondary" id="newGameBtn">↻ New Game</button>
+
+        <div class="seed-row">
+          <div class="stat-label">Seed</div>
+          <div class="seed-pill" id="seedDisplay"></div>
+        </div>
+
+        <div class="settings-divider"></div>
+        <div class="settings-header">Actions</div>
+
+        <button class="action-btn action-btn--primary" id="newGameSameBtn">
+          <span class="action-icon">↻</span>
+          <span class="action-text">
+            <span class="action-title">Same Players</span>
+            <span class="action-sub">Reshuffle roles, keep names</span>
+          </span>
+        </button>
+
+        <button class="action-btn action-btn--danger" id="newGameBtn">
+          <span class="action-icon">⟲</span>
+          <span class="action-text">
+            <span class="action-title">New Game</span>
+            <span class="action-sub">Reset players & setup</span>
+          </span>
+        </button>
       </div>
     </div>
     <div id="settingsScrim"></div>
@@ -208,7 +237,7 @@ function renderAll(){
   renderTracks();
   document.getElementById('deckCount').textContent = state.deck.length;
   document.getElementById('discardCount').textContent = state.discard.length;
-  document.getElementById('seedDisplay').textContent = 'seed: ' + state.seed;
+  document.getElementById('seedDisplay').textContent = state.seed;
 }
 
 function renderPlayers(){
