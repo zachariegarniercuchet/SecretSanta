@@ -275,13 +275,27 @@ function openFirstRevealModal(p){
   document.getElementById('revealBtn').onclick = ()=>showRoleCards(p);
 }
 
+const ROLE_CARD_IMG = {
+  hitler:  'icons/card_hitler.png',
+  fascist: 'icons/card_fascist.png',
+  liberal: 'icons/card_liberal.png'
+};
+
+function partyCardInner(party){
+  const logo = party === 'fascist' ? 'icons/logo_fascist.png' : 'icons/logo_liberal.png';
+  return `
+    <div class="party-card-inner">
+      <div class="party-card-header">Party<br>Membership</div>
+      <img class="party-card-logo" src="${logo}" alt="${party}">
+      <div class="party-card-name">${party.toUpperCase()}</div>
+    </div>
+  `;
+}
+
 function showRoleCards(p){
   const content = document.getElementById('modalContent');
   let roleClass = 'role-' + p.role;
-  let roleInner = p.role === 'hitler'
-    ? '<img class="role-card-img" src="icons/Hitler_card.png" alt="Hitler">'
-    : p.role.toUpperCase();
-  let partyText = p.party.toUpperCase() + ' PARTY';
+  let roleInner = `<img class="role-card-img" src="${ROLE_CARD_IMG[p.role]}" alt="${p.role}">`;
   let teammateHtml = '';
 
   if(p.role === 'fascist'){
@@ -300,7 +314,7 @@ function showRoleCards(p){
     <div class="modal-title">${p.name}'s Role</div>
     <div class="card-row">
       <div class="card-big ${roleClass}">${roleInner}</div>
-      <div class="card-big role-fascist">${partyText}</div>
+      <div class="card-big role-${p.party}">${partyCardInner(p.party)}</div>
     </div>
     ${teammateHtml}
     <button class="close-x gold" id="closeModalBtn">Done — Close</button>
@@ -319,7 +333,7 @@ function openPartyOnlyModal(p){
   document.getElementById('revealPartyBtn').onclick = ()=>{
     content.innerHTML = `
       <div class="modal-title">${p.name}'s Party Membership</div>
-      <div class="card-big role-${p.party}">${p.party.toUpperCase()} PARTY</div>
+      <div class="card-big role-${p.party}">${partyCardInner(p.party)}</div>
       <button class="close-x gold" id="closeModalBtn">Close</button>
     `;
     document.getElementById('closeModalBtn').onclick = closeModal;
