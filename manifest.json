@@ -1,6 +1,6 @@
 {
   "name": "Secret Hitler Board",
-  "short_name": "SH Board",
+  "short_name": "Secret Hitler",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "landscape",
