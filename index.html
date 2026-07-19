@@ -17,28 +17,36 @@
 <body>
 
 <div class="app-frame">
-  <div id="titleBlock">
-    <div class="crest">
-      <svg viewBox="0 0 100 60" class="crest-svg">
-        <path d="M50 5 L58 20 L75 15 L65 30 L85 35 L62 38 L70 55 L50 42 L30 55 L38 38 L15 35 L35 30 L25 15 L42 20 Z" />
-      </svg>
-    </div>
-    <h1>Secret Hitler</h1>
-    <div class="subtitle">A Party Congress Simulation — Germany, 1933</div>
-  </div>
-
   <!-- ================= SETUP ================= -->
   <div id="setup-screen">
-    <label for="numPlayers">Number of players</label>
-    <select id="numPlayers">
-      <option value="5">5</option><option value="6">6</option><option value="7">7</option>
-      <option value="8" selected>8</option><option value="9">9</option><option value="10">10</option>
-    </select>
+    <div class="setup-hero">
+      <div class="setup-hero-glow"></div>
+      <img src="icons/card_hitler.png" alt="Secret Hitler" class="setup-hero-img">
+    </div>
+    <h1 class="setup-title">Secret Hitler</h1>
+    <div class="setup-subtitle">A Party Congress Simulation — Germany, 1933</div>
 
-    <label for="seedInput">Seed (optional — same seed = same deal)</label>
-    <input type="text" id="seedInput" placeholder="leave blank for random">
+    <div class="setup-card">
+      <div class="setup-section-label">Number of Players</div>
+      <div class="player-count-row" id="playerCountRow">
+        <button class="count-chip" data-count="5">5</button>
+        <button class="count-chip" data-count="6">6</button>
+        <button class="count-chip" data-count="7">7</button>
+        <button class="count-chip selected" data-count="8">8</button>
+        <button class="count-chip" data-count="9">9</button>
+        <button class="count-chip" data-count="10">10</button>
+      </div>
 
-    <button id="playBtn" class="gold">Begin Session</button>
+      <div class="setup-section-label">Seed <span class="setup-optional">(optional)</span></div>
+      <div class="seed-input-row">
+        <input type="text" id="seedInput" placeholder="Random each time">
+        <button class="dice-btn" id="diceSeedBtn" title="Generate random seed" type="button">🎲</button>
+      </div>
+
+      <button id="playBtn" class="play-btn">
+        <span>Begin Session</span>
+      </button>
+    </div>
   </div>
 
   <!-- ================= GAME ================= -->
@@ -691,12 +699,23 @@ function openPolicyPeekModal(){
 }
 
 /* ============ SETUP / NEW GAME ============ */
+document.querySelectorAll('.count-chip').forEach(chip=>{
+  chip.onclick = ()=>{
+    document.querySelectorAll('.count-chip').forEach(c=>c.classList.remove('selected'));
+    chip.classList.add('selected');
+  };
+});
+
+document.getElementById('diceSeedBtn').onclick = ()=>{
+  document.getElementById('seedInput').value = Math.random().toString(36).slice(2, 9);
+};
+
 document.getElementById('playBtn').onclick = ()=>{
-  const n = parseInt(document.getElementById('numPlayers').value);
+  const selectedChip = document.querySelector('.count-chip.selected');
+  const n = parseInt(selectedChip.dataset.count);
   const seed = document.getElementById('seedInput').value;
   initGame(n, seed);
   document.getElementById('setup-screen').classList.add('hidden');
-  document.getElementById('titleBlock').classList.add('hidden');
   document.getElementById('game-screen').classList.remove('hidden');
   renderAll();
 };
@@ -704,7 +723,6 @@ document.getElementById('playBtn').onclick = ()=>{
 document.getElementById('newGameBtn').onclick = ()=>{
   if(!confirm('Start a brand new game? This will discard current progress.')) return;
   document.getElementById('game-screen').classList.add('hidden');
-  document.getElementById('titleBlock').classList.remove('hidden');
   document.getElementById('setup-screen').classList.remove('hidden');
   document.getElementById('powerBanner').innerHTML = '';
   setSettingsOpen(false);
