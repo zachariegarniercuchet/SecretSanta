@@ -57,6 +57,9 @@
       <div class="card-deck" id="drawPileBtn">
         <div class="deck-word">DRAW</div>
       </div>
+      <div class="chaos-btn" id="chaosBtn">
+        <div class="deck-word">CHAOS</div>
+      </div>
       <div id="table-center">
         <div class="track-label">LIBERAL POLICIES</div>
         <div class="track" id="liberalTrack"></div>
@@ -328,7 +331,61 @@ function closeModal(){
   document.getElementById('modalContent').innerHTML = '';
 }
 
+
 /* ============ LEGISLATIVE SESSION ============ */
+
+document.getElementById('chaosBtn').onclick = ()=>{
+  if(state.legislative){ alert('Finish the current legislative session first.'); return; }
+  openChaosConfirm();
+};
+
+function openChaosConfirm(){
+  const content = document.getElementById('modalContent');
+  content.innerHTML = `
+    <div class="modal-title">Country in Chaos</div>
+    <p>Three governments have been rejected in a row. The top policy of the deck will be revealed and enacted automatically. Any Presidential Power it grants is ignored.</p>
+    <div style="margin-top:16px;">
+      <button class="gold" id="chaosConfirmBtn">Confirm</button>
+      <button class="secondary" id="chaosDismissBtn" style="margin-left:10px;">Dismiss</button>
+    </div>
+  `;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.getElementById('chaosDismissBtn').onclick = closeModal;
+  document.getElementById('chaosConfirmBtn').onclick = runChaosEnactment;
+}
+
+function runChaosEnactment(){
+  const drawn = drawCards(1);
+  if(drawn.length === 0){ alert('No policy cards remain to enact.'); closeModal(); return; }
+  const type = drawn[0];
+
+  const content = document.getElementById('modalContent');
+  content.innerHTML = `
+    <div class="modal-title">Chaos Policy Revealed</div>
+    <div class="card-row">
+      <div class="card-big policy-${type}">${type.toUpperCase()}</div>
+    </div>
+    <p class="banner-hint">Enacted automatically. Powers granted by this policy are ignored. Reset the Election Tracker and term limits at the table.</p>
+    <button class="close-x gold" id="closeModalBtn">Done — Close</button>
+  `;
+  document.getElementById('closeModalBtn').onclick = ()=>{
+    closeModal();
+    finishChaosEnactment(type);
+  };
+}
+
+function finishChaosEnactment(type){
+  if(type === 'liberal') state.liberalCount++;
+  else state.fascistCount++;
+  renderAll();
+  // Powers are intentionally ignored here -- only check for game-ending win conditions.
+  if(state.liberalCount >= 5){
+    setTimeout(()=>alert('🕊 LIBERAL VICTORY — 5 Liberal policies enacted!'), 200);
+  } else if(state.fascistCount >= 6){
+    setTimeout(()=>alert('🔥 FASCIST VICTORY — 6 Fascist policies enacted!'), 200);
+  }
+}
+
 document.getElementById('drawPileBtn').onclick = ()=>{
   if(state.legislative){ alert('A legislative session is already in progress.'); return; }
   const three = drawCards(3);
