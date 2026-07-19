@@ -50,8 +50,9 @@
         <div>Deck: <span id="deckCount">0</span></div>
         <div>Discard: <span id="discardCount">0</span></div>
       </div>
+      <button class="secondary" id="newGameSameBtn">↻ New Game (same players)</button>
       <button class="secondary" id="newGameBtn">↻ New Game</button>
-    </div>
+        </div>
 
     <div id="table-wrap">
       <div class="card-deck" id="drawPileBtn">
@@ -141,7 +142,7 @@ const POWER_TEXT = {
 /* ============ STATE ============ */
 let state = null;
 
-function initGame(numPlayers, seedStr){
+function initGame(numPlayers, seedStr, presetNames){
   const seed = seedStr && seedStr.trim() ? seedStr.trim() : String(Date.now());
   const rng = makeRng(seed);
 
@@ -155,8 +156,11 @@ function initGame(numPlayers, seedStr){
   const players = [];
   for(let i=0;i<numPlayers;i++){
     players.push({
-      id:i, name:null, role:roles[i],
-      party: roles[i]==='liberal' ? 'liberal' : 'fascist'
+      id:i,
+      name: presetNames ? presetNames[i] : null,
+      role:roles[i],
+      party: roles[i]==='liberal' ? 'liberal' : 'fascist',
+      revealed:false
     });
   }
 
@@ -253,11 +257,13 @@ function renderTracks(){
 /* ============ PLAYER HEAD CLICK ============ */
 function onPlayerClick(id){
   const p = state.players[id];
-  if(!p.name){
-    const n = window.prompt('Enter this player\'s name:');
-    if(!n) return;
-    p.name = n.trim();
-    renderPlayers();
+  if(!p.revealed){
+    if(!p.name){
+      const n = window.prompt('Enter this player\'s name:');
+      if(!n) return;
+      p.name = n.trim();
+      renderPlayers();
+    }
     openFirstRevealModal(p);
   } else {
     openPartyOnlyModal(p);
@@ -319,7 +325,10 @@ function showRoleCards(p){
     ${teammateHtml}
     <button class="close-x gold" id="closeModalBtn">Done — Close</button>
   `;
-  document.getElementById('closeModalBtn').onclick = closeModal;
+  document.getElementById('closeModalBtn').onclick = ()=>{
+    p.revealed = true;
+    closeModal();
+  };
 }
 
 function openPartyOnlyModal(p){
@@ -667,6 +676,15 @@ document.getElementById('newGameBtn').onclick = ()=>{
   document.getElementById('setup-screen').classList.remove('hidden');
   document.getElementById('powerBanner').innerHTML = '';
   document.getElementById('settingsPanel').classList.add('hidden');
+};
+document.getElementById('newGameSameBtn').onclick = ()=>{
+  if(!confirm('Start a new game with the same players and fresh random roles?')) return;
+  const presetNames = state.players.map(p => p.name);
+  const numPlayers = state.numPlayers;
+  initGame(numPlayers, '', presetNames);
+  document.getElementById('settingsPanel').classList.add('hidden');
+  document.getElementById('powerBanner').innerHTML = '';
+  renderAll();
 };
 
 document.getElementById('settingsBtn').onclick = ()=>{
