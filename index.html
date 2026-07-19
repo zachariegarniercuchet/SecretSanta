@@ -43,16 +43,19 @@
 
   <!-- ================= GAME ================= -->
   <div id="game-screen" class="hidden">
-    <div id="settingsBtn">⚙</div>
-    <div id="settingsPanel" class="hidden">
-      <div id="seedDisplay"></div>
-      <div class="settings-counts">
-        <div>Deck: <span id="deckCount">0</span></div>
-        <div>Discard: <span id="discardCount">0</span></div>
-      </div>
-      <button class="secondary" id="newGameSameBtn">↻ New Game (same players)</button>
-      <button class="secondary" id="newGameBtn">↻ New Game</button>
+    <div id="settingsTab">‹</div>
+    <div id="settingsPanel">
+      <div class="settings-panel-inner">
+        <div id="seedDisplay"></div>
+        <div class="settings-counts">
+          <div>Deck: <span id="deckCount">0</span></div>
+          <div>Discard: <span id="discardCount">0</span></div>
         </div>
+        <button class="secondary" id="newGameSameBtn">↻ New Game (same players)</button>
+        <button class="secondary" id="newGameBtn">↻ New Game</button>
+      </div>
+    </div>
+    <div id="settingsScrim"></div>
 
     <div id="table-wrap">
       <div class="card-deck" id="drawPileBtn">
@@ -675,21 +678,29 @@ document.getElementById('newGameBtn').onclick = ()=>{
   document.getElementById('titleBlock').classList.remove('hidden');
   document.getElementById('setup-screen').classList.remove('hidden');
   document.getElementById('powerBanner').innerHTML = '';
-  document.getElementById('settingsPanel').classList.add('hidden');
+  setSettingsOpen(false);
 };
 document.getElementById('newGameSameBtn').onclick = ()=>{
   if(!confirm('Start a new game with the same players and fresh random roles?')) return;
   const presetNames = state.players.map(p => p.name);
   const numPlayers = state.numPlayers;
   initGame(numPlayers, '', presetNames);
-  document.getElementById('settingsPanel').classList.add('hidden');
+  setSettingsOpen(false);
   document.getElementById('powerBanner').innerHTML = '';
   renderAll();
 };
 
-document.getElementById('settingsBtn').onclick = ()=>{
-  document.getElementById('settingsPanel').classList.toggle('hidden');
+function setSettingsOpen(open){
+  document.getElementById('settingsPanel').classList.toggle('open', open);
+  document.getElementById('settingsScrim').classList.toggle('open', open);
+  document.getElementById('settingsTab').textContent = open ? '›' : '‹';
+}
+
+document.getElementById('settingsTab').onclick = ()=>{
+  const isOpen = document.getElementById('settingsPanel').classList.contains('open');
+  setSettingsOpen(!isOpen);
 };
+document.getElementById('settingsScrim').onclick = ()=> setSettingsOpen(false);
 
 /* ============ YOUTUBE-STYLE FULLSCREEN CONTROL ============ */
 const ICON_EXPAND = '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';

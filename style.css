@@ -77,25 +77,47 @@ button.gold{ background:linear-gradient(180deg,var(--gold-light),var(--gold)); c
 }
 #playBtn{ margin-top:22px; width:100%; padding:14px; font-size:1em;}
 
-/* ---------- SETTINGS MENU ---------- */
-#settingsBtn{
-  position:absolute; top:10px; right:14px; z-index:20;
-  width:34px; height:34px; border-radius:50%;
-  background:rgba(0,0,0,0.5); border:1px solid var(--gold);
+/* ---------- SETTINGS DRAWER (slides in from the right edge) ---------- */
+#game-screen{ position:relative; overflow:hidden; }
+
+#settingsTab{
+  position:absolute; top:50%; right:0; z-index:30;
+  transform:translateY(-50%);
+  width:26px; height:56px;
+  background:rgba(0,0,0,0.55); border:1px solid var(--gold); border-right:none;
+  border-radius:8px 0 0 8px;
   color:var(--gold-light); display:flex; align-items:center; justify-content:center;
-  font-size:1.1em; cursor:pointer;
+  font-size:1.3em; cursor:pointer;
+  transition:right 0.3s ease;
 }
+#settingsTab.open{ right:220px; }
+
+#settingsScrim{
+  position:absolute; top:0; left:0; width:100%; height:100%; z-index:25;
+  background:rgba(0,0,0,0.4);
+  opacity:0; visibility:hidden; pointer-events:none;
+  transition:opacity 0.3s ease;
+}
+#settingsScrim.open{ opacity:1; visibility:visible; pointer-events:auto; }
+
 #settingsPanel{
-  position:absolute; top:50px; right:14px; z-index:20;
-  background:#1a1512; border:1px solid var(--gold); border-radius:6px;
-  padding:10px; text-align:right; box-shadow:0 4px 12px rgba(0,0,0,0.6);
+  position:absolute; top:0; right:0; height:100%; width:220px; z-index:28;
+  background:#1a1512; border-left:1px solid var(--gold);
+  box-shadow:-6px 0 20px rgba(0,0,0,0.6);
+  transform:translateX(100%);
+  transition:transform 0.3s ease;
+}
+#settingsPanel.open{ transform:translateX(0); }
+
+.settings-panel-inner{
+  padding:calc(env(safe-area-inset-top, 0px) + 20px) 16px 16px;
+  text-align:right;
 }
 #seedDisplay{ color:var(--muted); font-size:0.7em; letter-spacing:1px; margin-bottom:8px;}
 .settings-counts{
-  color:var(--parchment); font-size:0.78em; margin-bottom:10px; text-align:right; line-height:1.6;
+  color:var(--parchment); font-size:0.78em; margin-bottom:14px; text-align:right; line-height:1.6;
 }
-#settingsPanel button{ display:block; width:100%; margin-top:6px;}
-#game-screen{ position:relative; }
+.settings-panel-inner button{ display:block; width:100%; margin-top:8px;}
 /* ---------- ROUND TABLE ---------- */
 #table-wrap{
   position:relative; width:100%; max-width:640px; aspect-ratio:16/10; margin:50px auto 8px;
