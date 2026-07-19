@@ -377,6 +377,7 @@ function runChaosEnactment(){
 function finishChaosEnactment(type){
   if(type === 'liberal') state.liberalCount++;
   else state.fascistCount++;
+  reshuffleIfLow();
   renderAll();
   // Powers are intentionally ignored here -- only check for game-ending win conditions.
   if(state.liberalCount >= 5){
@@ -538,9 +539,20 @@ function enactPolicy(type){
     state.fascistCount++;
   }
   state.legislative = null;
+  reshuffleIfLow();
   closeModal();
   renderAll();
   checkWinAndPower(type);
+}
+
+// Rule: at the end of a legislative session (or a chaos enactment), if fewer
+// than 3 cards remain in the deck, shuffle the whole discard pile back in
+// to form a fresh deck -- don't wait until the deck is fully empty mid-draw.
+function reshuffleIfLow(){
+  if(state.deck.length < 3 && state.discard.length > 0){
+    state.deck = shuffle(state.deck.concat(state.discard), state.rng);
+    state.discard = [];
+  }
 }
 
 function checkWinAndPower(justEnacted){
