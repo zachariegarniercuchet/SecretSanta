@@ -536,6 +536,8 @@ function closePowerBanner(){
 }
 
 /* ============ POLICY PEEK ============ */
+const PEEK_ORDER_LABELS = ['First', 'Second', 'Third'];
+
 function openPolicyPeekModal(){
   const content = document.getElementById('modalContent');
   content.innerHTML = `
@@ -548,9 +550,14 @@ function openPolicyPeekModal(){
     const top = peekTop(3);
     const note = top.length < 3 ? `<p class="banner-hint">Only ${top.length} card(s) remain before a reshuffle.</p>` : '';
     content.innerHTML = `
-      <div class="modal-title">Top of deck (order preserved)</div>
-      <div class="card-row">
-        ${top.map(c=>`<div class="card-big policy-${c}">${c.toUpperCase()}</div>`).join('')}
+      <div class="modal-title">Top of deck, in draw order</div>
+      <div class="peek-stage">
+        ${top.map((c,i)=>`
+          <div class="peek-card-wrap">
+            <div class="lcard policy-${c} static">${c.toUpperCase()}</div>
+            <div class="peek-order">${PEEK_ORDER_LABELS[i]}</div>
+          </div>
+        `).join('')}
       </div>
       ${note}
       <button class="close-x gold" id="closeModalBtn">Done — Close</button>

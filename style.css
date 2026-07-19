@@ -219,6 +219,22 @@ button.gold{ background:linear-gradient(180deg,var(--gold-light),var(--gold)); c
   z-index:5; transition:left 0.4s cubic-bezier(.34,1.2,.64,1), top 0.4s cubic-bezier(.34,1.2,.64,1);
   box-shadow:0 3px 8px rgba(0,0,0,0.5);
 }
+
+/* ---------- POLICY PEEK (static, ordered, non-interactive) ---------- */
+.peek-stage{
+  display:flex; justify-content:center; align-items:flex-start; gap:14px; margin:16px 0 6px;
+}
+.peek-card-wrap{
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+}
+.peek-order{
+  font-size:0.7em; color:var(--gold-light); text-transform:uppercase; letter-spacing:1px;
+}
+.lcard.static{
+  position:static; width:64px; height:90px; font-size:0.62em;
+  animation:none; cursor:default; transition:none;
+}
+
 .lcard.policy-liberal{ background:var(--blue-bright); }
 .lcard.policy-fascist{ background:var(--red-bright); }
 .lcard.shake{ animation:cardShake 1.1s ease-in-out infinite; }
